@@ -5,7 +5,7 @@ from app.database import engine, Base
 from app import models
 from app.detection.face_detector import FaceDetector
 from app.services.stream_manager import StreamManager
-from app.routers import stream
+from app.routers import stream, feed  # Added 'feed' here
 
 # Initialize singletons
 face_detector = FaceDetector()
@@ -42,8 +42,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the WebSocket router
+# Include the routers
 app.include_router(stream.router)
+app.include_router(feed.router)   # Added feed router here
 
 
 @app.get("/health")
