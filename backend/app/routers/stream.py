@@ -1,6 +1,9 @@
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.detection.roi_drawer import ROIDrawer
+from app.database import AsyncSessionLocal
+from app.models import Session as SessionModel
+from app.services.roi_repository import ROIRepository
 
 router = APIRouter()
 
@@ -9,11 +12,20 @@ router = APIRouter()
 async def websocket_stream(websocket: WebSocket):
     await websocket.accept()
     
-    # Access the singletons we will create in main.py
+    # Access the singletons from app state
     detector = websocket.app.state.face_detector
     stream_mgr = websocket.app.state.stream_manager
     
     frame_count = 0
+    db_session_id = None
+
+    # Create a new database session record for this stream
+    async with AsyncSessionLocal() as db:
+        new_session = SessionModel(status="active")
+        db.add(new_session)
+        await db.commit()
+        await db.refresh(new_session)
+        db_session_id = new_session.id
 
     try:
         while True:
@@ -31,7 +43,6 @@ async def websocket_stream(websocket: WebSocket):
 
             # 3. Detect face
             bbox = detector.detect(np_img)
-
             roi_data = None
 
             # 4. Draw ROI if face found
@@ -47,6 +58,17 @@ async def websocket_stream(websocket: WebSocket):
                     "height": bbox.height,
                     "confidence": round(bbox.confidence, 3)
                 }
+
+                # Save ROI to database (non-blocking)
+                async with AsyncSessionLocal() as db:
+                    repo = ROIRepository(db)
+                    await repo.save_roi(
+                        session_id=db_session_id,
+                        frame_number=frame_count,
+                        x=bbox.x, y=bbox.y,
+                        width=bbox.width, height=bbox.height,
+                        confidence=bbox.confidence
+                    )
             else:
                 # No face found, send original image back
                 annotated_img = pil_img
@@ -70,3 +92,11 @@ async def websocket_stream(websocket: WebSocket):
         print("Client disconnected from WebSocket")
     except Exception as e:
         print(f"WebSocket error: {e}")
+    finally:
+        # Mark session as ended when WebSocket closes
+        if db_session_id:
+            async with AsyncSessionLocal() as db:
+                session_obj = await db.get(SessionModel, db_session_id)
+                if session_obj:
+                    session_obj.status = "ended"
+                    await db.commit()
