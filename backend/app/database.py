@@ -1,8 +1,9 @@
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Database URL configuration
-DATABASE_URL = "postgresql+asyncpg://app:secretboi@db:5432/facedetect"
+# Reads the DATABASE_URL from the .env file, falls back to the hardcoded one if not found
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://app:secretboi@db:5432/facedetect")
 
 # The engine manages the connection pool to the database
 engine = create_async_engine(DATABASE_URL, echo=True)
@@ -17,7 +18,7 @@ AsyncSessionLocal = sessionmaker(
 # The base class that all our database models will inherit from
 Base = declarative_base()
 
-# This function will be used by our API routes to get a database session
+# Dependency to get a database session in API routes
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
