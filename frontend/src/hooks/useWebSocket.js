@@ -1,57 +1,57 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-const WS_URL = "ws://localhost:8000/ws/stream";
+const WS_URL = "ws://127.0.0.1:8000/ws/stream";
 
-export const useWebSocket = () => {
-  const [annotatedFrame, setAnnotatedFrame] = useState(null);
+export const useWebSocket = (captureCallbackRef) => {
   const [roiData, setRoiData] = useState(null);
+  const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
 
-  useEffect(() => {
-    const connect = () => {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        console.log("WebSocket Connected");
-      };
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.frame) {
-          setAnnotatedFrame(`data:image/jpeg;base64,${data.frame}`);
-        }
-        if (data.roi) {
-          setRoiData(data.roi);
-        }
-      };
-
-      ws.onclose = () => {
-        console.log("WebSocket Disconnected. Reconnecting...");
-        // Automatically reconnect after 3 seconds
-        setTimeout(connect, 3000);
-      };
-
-      ws.onerror = (err) => {
-        console.error("WebSocket Error:", err);
-        ws.close();
-      };
-    };
-
-    connect();
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
+  const sendFrame = useCallback((base64Data) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ frame: base64Data }));
+    }
   }, []);
 
-  const sendFrame = (base64Data) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ frame: base64Data }));
-    }
-  };
+  useEffect(() => {
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
-  return { annotatedFrame, roiData, sendFrame };
+    ws.onopen = () => {
+      console.log("[WS] Connected");
+      setConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // Update ROI display data (null means no face in this frame)
+        setRoiData(data.roi ?? null);
+
+        if (data.ack && captureCallbackRef.current) {
+          captureCallbackRef.current();
+        }
+      } catch (e) {
+        console.error("[WS] Failed to parse message:", e);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("[WS] Disconnected");
+      setConnected(false);
+    };
+
+    ws.onerror = (err) => {
+      console.error("[WS] Error:", err);
+      ws.close();
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []); // Intentionally empty — WS connects once on mount
+
+  return { roiData, connected, sendFrame };
 };

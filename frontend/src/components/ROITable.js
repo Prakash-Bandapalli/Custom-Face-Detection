@@ -4,18 +4,23 @@ function ROITable() {
   const [rois, setRois] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchHistory = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch("http://localhost:8000/api/roi?limit=50");
+      const response = await fetch("http://127.0.0.1:8000/api/roi?limit=50");
       if (response.ok) {
         const data = await response.json();
         setRois(data.data);
         setTotal(data.total);
+      } else {
+        setError(`Server returned ${response.status}`);
       }
-    } catch (error) {
-      console.error("Failed to fetch ROI data:", error);
+    } catch (err) {
+      setError("Could not reach backend. Is it running?");
+      console.error("Failed to fetch ROI data:", err);
     } finally {
       setLoading(false);
     }
@@ -31,15 +36,22 @@ function ROITable() {
         style={{
           padding: "8px 16px",
           marginBottom: "10px",
-          cursor: "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
           backgroundColor: "#1890ff",
           color: "white",
           border: "none",
           borderRadius: "5px",
+          opacity: loading ? 0.7 : 1,
         }}
       >
         {loading ? "Loading..." : "Load DB History"}
       </button>
+
+      {error && (
+        <p style={{ color: "#ff4d4f", fontSize: "13px", marginBottom: "8px" }}>
+          {error}
+        </p>
+      )}
 
       <div
         style={{
@@ -73,9 +85,13 @@ function ROITable() {
               <tr>
                 <td
                   colSpan="6"
-                  style={{ textAlign: "center", padding: "20px" }}
+                  style={{
+                    textAlign: "center",
+                    padding: "20px",
+                    color: "#aaa",
+                  }}
                 >
-                  Click button to load history
+                  {loading ? "Fetching..." : "Click button to load history"}
                 </td>
               </tr>
             ) : (

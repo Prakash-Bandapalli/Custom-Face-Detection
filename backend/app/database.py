@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://app:secretboi@db:5432/facedetect")
 
 # The engine manages the connection pool to the database
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(DATABASE_URL, echo=False)
 
 # A factory to create database sessions
 AsyncSessionLocal = sessionmaker(

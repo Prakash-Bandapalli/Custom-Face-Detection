@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
+from typing import Optional
 
 
 class ROIData(BaseModel):
@@ -11,11 +12,11 @@ class ROIData(BaseModel):
     y: int
     width: int
     height: int
-    confidence: float | None
-    detection_timestamp: datetime
+    confidence: Optional[float] = None
+    detection_timestamp: Optional[datetime] = None  # <-- Made Optional
 
     class Config:
-        from_attributes = True  # Allows reading data directly from SQLAlchemy models
+        from_attributes = True
 
 
 class ROIResponse(BaseModel):
