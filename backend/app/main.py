@@ -5,9 +5,8 @@ from app.database import engine, Base
 from app import models
 from app.detection.face_detector import FaceDetector
 from app.services.stream_manager import StreamManager
-from app.routers import stream, feed, roi  # Added 'roi'
+from app.routers import stream, feed, roi, sessions  # added sessions
 
-# Initialize singletons
 face_detector = FaceDetector()
 stream_manager = StreamManager()
 
@@ -20,9 +19,9 @@ async def lifespan(app: FastAPI):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     yield
-    
+
     # --- SHUTDOWN ---
     face_detector.close()
     await engine.dispose()
@@ -38,10 +37,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the routers
 app.include_router(stream.router)
 app.include_router(feed.router)
-app.include_router(roi.router)   # Added roi router here
+app.include_router(roi.router)
+app.include_router(sessions.router)  # added
 
 
 @app.get("/health")
