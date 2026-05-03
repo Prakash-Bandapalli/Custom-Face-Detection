@@ -18,7 +18,10 @@ function VideoFeed() {
   const isStreamingRef = useRef(false);
   const captureCallbackRef = useRef(null);
 
-  const { roiData, connected, sendFrame } = useWebSocket(captureCallbackRef);
+  const { roiData, connected, sendFrame } = useWebSocket(
+    captureCallbackRef,
+    isStreaming,
+  );
 
   useEffect(() => {
     if (roiData) setTotalDetections((n) => n + 1);

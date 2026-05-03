@@ -27,7 +27,6 @@ async def _save_roi_bg(session_id, frame_number, bbox):
                 confidence=bbox.confidence,
             )
     except Exception as e:
-        # Log but never crash the stream over a DB write failure
         print(f"[DB] Background ROI save failed on frame {frame_number}: {e}")
 
 
@@ -41,14 +40,6 @@ async def websocket_stream(websocket: WebSocket):
     frame_count = 0
     db_session_id = None
 
-    # Create a DB session record for this stream connection
-    async with AsyncSessionLocal() as db:
-        new_session = SessionModel(status="active")
-        db.add(new_session)
-        await db.commit()
-        await db.refresh(new_session)
-        db_session_id = new_session.id
-
     try:
         while True:
             # 1. Receive frame from browser
@@ -57,19 +48,29 @@ async def websocket_stream(websocket: WebSocket):
             frame_b64 = msg.get("frame")
 
             if not frame_b64:
-                # Malformed message — ACK anyway so the frontend doesn't stall
                 await websocket.send_json({"ack": True, "roi": None})
                 continue
 
-            # 2. Decode base64 → PIL → numpy
+            # 2. Create session record on the very first frame only.
+            #    This ensures no empty session records are created when
+            #    the WebSocket connects but no frames are sent.
+            if frame_count == 0 and db_session_id is None:
+                async with AsyncSessionLocal() as db:
+                    new_session = SessionModel(status="active")
+                    db.add(new_session)
+                    await db.commit()
+                    await db.refresh(new_session)
+                    db_session_id = new_session.id
+
+            # 3. Decode base64 → PIL → numpy
             pil_img = ROIDrawer.b64_to_pil(frame_b64)
             np_img = ROIDrawer.pil_to_np(pil_img)
 
-            # 3. Detect face
+            # 4. Detect face
             bbox = detector.detect(np_img)
             roi_data = None
 
-            # 4. Draw ROI if face found
+            # 5. Draw ROI if face found
             if bbox:
                 annotated = ROIDrawer.draw(pil_img, bbox)
                 roi_data = {
@@ -79,22 +80,19 @@ async def websocket_stream(websocket: WebSocket):
                     "height": bbox.height,
                     "confidence": round(bbox.confidence, 3),
                 }
-                # Kick off DB write as a background task — zero blocking here
+                # Fire-and-forget — never blocks the frame loop
                 asyncio.create_task(
                     _save_roi_bg(db_session_id, frame_count, bbox)
                 )
             else:
                 annotated = pil_img
 
-            # 5. Encode annotated frame and push to the MJPEG feed endpoint
+            # 6. Encode and push to MJPEG feed
             out_b64 = ROIDrawer.pil_to_b64(annotated)
             frame_count += 1
             stream_mgr.update(out_b64, roi_data, frame_count)
 
-            # 6. Send a lightweight ACK back to the browser (no frame bytes!)
-            #    The browser uses this ACK as the signal to send its next frame.
-            #    This creates natural backpressure: the frontend only ever has
-            #    one frame in-flight at a time.
+            # 7. ACK — signals frontend to send next frame (natural backpressure)
             await websocket.send_json({"ack": True, "roi": roi_data})
 
     except WebSocketDisconnect:
@@ -102,6 +100,7 @@ async def websocket_stream(websocket: WebSocket):
     except Exception as e:
         print(f"[WS] Unexpected error: {e}")
     finally:
+        # Guard: only runs if a session was actually created
         if db_session_id:
             try:
                 async with AsyncSessionLocal() as db:

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const WS_URL = "ws://127.0.0.1:8000/ws/stream";
+const WS_BASE = process.env.REACT_APP_WS_URL || "ws://127.0.0.1:8000";
+const WS_URL = `${WS_BASE}/ws/stream`;
 
-export const useWebSocket = (captureCallbackRef) => {
+export const useWebSocket = (captureCallbackRef, isStreaming) => {
   const [roiData, setRoiData] = useState(null);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
@@ -15,6 +16,7 @@ export const useWebSocket = (captureCallbackRef) => {
   }, []);
 
   useEffect(() => {
+    if (!isStreaming) return;
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
@@ -51,7 +53,7 @@ export const useWebSocket = (captureCallbackRef) => {
     return () => {
       ws.close();
     };
-  }, []); // Intentionally empty — WS connects once on mount
+  }, [isStreaming]); 
 
   return { roiData, connected, sendFrame };
 };
