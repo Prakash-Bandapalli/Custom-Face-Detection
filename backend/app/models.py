@@ -22,7 +22,7 @@ class RegionOfInterest(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
     frame_number = Column(Integer, nullable=False)
-    detection_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())  # <-- ADDED THIS LINE
+    detection_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now()) 
     x = Column(Integer, nullable=False)
     y = Column(Integer, nullable=False)
     width = Column(Integer, nullable=False)

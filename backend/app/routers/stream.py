@@ -42,7 +42,7 @@ async def websocket_stream(websocket: WebSocket):
 
     try:
         while True:
-            # 1. Receive frame from browser
+           
             data = await websocket.receive_text()
             msg = json.loads(data)
             frame_b64 = msg.get("frame")
@@ -51,9 +51,9 @@ async def websocket_stream(websocket: WebSocket):
                 await websocket.send_json({"ack": True, "roi": None})
                 continue
 
-            # 2. Create session record on the very first frame only.
-            #    This ensures no empty session records are created when
-            #    the WebSocket connects but no frames are sent.
+            # Create session record on the very first frame only.
+            # This ensures no empty session records are created when
+            # the WebSocket connects but no frames are sent.
             if frame_count == 0 and db_session_id is None:
                 async with AsyncSessionLocal() as db:
                     new_session = SessionModel(status="active")
@@ -62,7 +62,7 @@ async def websocket_stream(websocket: WebSocket):
                     await db.refresh(new_session)
                     db_session_id = new_session.id
 
-            # 3. Decode base64 → PIL → numpy
+           
             pil_img = ROIDrawer.b64_to_pil(frame_b64)
             np_img = ROIDrawer.pil_to_np(pil_img)
 
@@ -70,7 +70,7 @@ async def websocket_stream(websocket: WebSocket):
             bbox = detector.detect(np_img)
             roi_data = None
 
-            # 5. Draw ROI if face found
+            
             if bbox:
                 annotated = ROIDrawer.draw(pil_img, bbox)
                 roi_data = {
@@ -87,12 +87,12 @@ async def websocket_stream(websocket: WebSocket):
             else:
                 annotated = pil_img
 
-            # 6. Encode and push to MJPEG feed
+            
             out_b64 = ROIDrawer.pil_to_b64(annotated)
             frame_count += 1
             stream_mgr.update(out_b64, roi_data, frame_count)
 
-            # 7. ACK — signals frontend to send next frame (natural backpressure)
+            # ACK — signals frontend to send next frame (natural backpressure)
             await websocket.send_json({"ack": True, "roi": roi_data})
 
     except WebSocketDisconnect:

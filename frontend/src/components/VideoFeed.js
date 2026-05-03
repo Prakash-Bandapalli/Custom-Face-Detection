@@ -31,7 +31,6 @@ function VideoFeed() {
     isStreamingRef.current = isStreaming;
   }, [isStreaming]);
 
-  // Timer + FPS
   useEffect(() => {
     if (!isStreaming) return;
     startTimeRef.current = Date.now();
@@ -117,7 +116,6 @@ function VideoFeed() {
 
   return (
     <div>
-      {/* Controls */}
       <div style={s.controlRow}>
         <button
           onClick={() => setIsStreaming((v) => !v)}
@@ -134,9 +132,7 @@ function VideoFeed() {
         </span>
       </div>
 
-      {/* Feed + stats */}
       <div style={s.row}>
-        {/* Video */}
         <div style={s.feedBox}>
           <video
             ref={videoRef}
@@ -158,7 +154,6 @@ function VideoFeed() {
           )}
         </div>
 
-        {/* Stats + ROI */}
         <div style={s.sidePanel}>
           {/* Stat cards */}
           <div style={s.statsGrid}>

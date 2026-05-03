@@ -60,7 +60,7 @@ class FaceDetector:
     def close(self):
         self._detector.close()
 
-    # Allows using this class with Python's "with" statement
+    
     def __enter__(self):
         return self
 

@@ -13,7 +13,7 @@ class ROIData(BaseModel):
     width: int
     height: int
     confidence: Optional[float] = None
-    detection_timestamp: Optional[datetime] = None  # <-- Made Optional
+    detection_timestamp: Optional[datetime] = None
 
     class Config:
         from_attributes = True

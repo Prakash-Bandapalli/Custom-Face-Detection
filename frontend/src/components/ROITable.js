@@ -18,8 +18,6 @@ const fmtDur = (s) => {
 const confColor = (v) =>
   v == null ? "#999" : v >= 0.8 ? "#52c41a" : v >= 0.6 ? "#faad14" : "#ff4d4f";
 
-// ── ROI detail per session ───────────────────────────────────────────────────
-
 function ROIDetail({ sessionId }) {
   const [rois, setRois] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -78,8 +76,6 @@ function ROIDetail({ sessionId }) {
   );
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
-
 function ROITable() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +101,6 @@ function ROITable() {
 
   return (
     <div>
-      {/* Controls */}
       <div style={s.topBar}>
         <button
           onClick={fetchSessions}
@@ -128,14 +123,12 @@ function ROITable() {
         )}
       </div>
 
-      {/* Empty state */}
       {!loading && sessions.length === 0 && !error && (
         <div style={s.empty}>
           Click "Load History" to view past detection sessions.
         </div>
       )}
 
-      {/* Table */}
       {sessions.length > 0 && (
         <div style={s.tableWrap}>
           {/* Header */}
@@ -231,8 +224,6 @@ function ROITable() {
     </div>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
 
 const COLS = "28px 90px 110px 100px 110px 100px 1fr";
 
